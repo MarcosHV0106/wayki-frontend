@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import AnimatedPage from "../components/AnimatedPage";
 import { toast } from 'sonner';
 const API = import.meta.env.VITE_API_URL;
-import { imprimirComandaBluetooth } from "../utils/impresionBluetooth";
 
 
 
@@ -58,21 +57,6 @@ const ComandaPreparando = () => {
 
     fetchMesaYComanda();
   }, [id, tipo]);
-
-  function generarTextoComanda(comanda) {
-  let texto = "=== COMANDA ===\n";
-  texto += `Mesa: ${comanda.mesa}\n`;
-  texto += `Fecha: ${new Date().toLocaleString()}\n\n`;
-
-  comanda.items.forEach(item => {
-    texto += `${item.cantidad}x ${item.nombre}\n`;
-  });
-
-  texto += "\n=====================\n";
-  texto += "WAYKI - Gracias por su pedido\n";
-  return texto;
-}
-
 
   const confirmarEntrega = async () => {
     try {
@@ -175,9 +159,6 @@ const ComandaPreparando = () => {
         >
           CONFIRMAR ENTREGA
         </motion.button>
-        <Button onClick={() => imprimirComandaBluetooth(generarTextoComanda(comanda))}>
-          Imprimir Comanda
-        </Button>
 
         <AnimatePresence>
           {mostrarModal && (
