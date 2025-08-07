@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import AnimatedPage from '../components/AnimatedPage';
-import ModalConfirmarLogout from "../components/ModalConfirmarLogout"; // ajusta la ruta según tu estructura
+import ModalConfirmarLogout from "../components/LogoutModal"; // ajusta la ruta según tu estructura
 import { Users, Eye, DollarSign, Plus } from 'lucide-react'; // Cambié CheckCircle por Users para el botón familiar
 import { toast } from 'sonner';
 
@@ -11,10 +11,14 @@ import { toast } from 'sonner';
 const MesaPanel = () => {
   const [mesas, setMesas] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [mostrarModal, setMostrarModal] = useState(false);
+  const [modalAbierto, setModalAbierto] = useState(false);
   const [seleccionadas, setSeleccionadas] = useState([]);
   const navigate = useNavigate();
-  
+
+  const cerrarSesion = () => {
+    localStorage.removeItem("token");
+    navigate("/");
+  };
 
   useEffect(() => {
     fetchMesas();
@@ -332,25 +336,23 @@ if (loading) {
             Panel de Mesas
           </motion.h1>
 
-          <motion.button
-            onClick={() => setMostrarModal(true)}
-            className="text-sm sm:text-base bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.2 }}
-          >
-            Cerrar Sesión
-          </motion.button>
+        <motion.button
+        onClick={() => setModalAbierto(true)}
+        className="text-sm sm:text-base bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.2 }}
+        >
+        Cerrar Sesión
+      </motion.button>
 
-          {mostrarModal && (
-            <ModalConfirmarLogout
-              onConfirm={() => {
-                localStorage.removeItem('token');
-                navigate('/');
-              }}
-              onCancel={() => setMostrarModal(false)}
-            />
-          )}
+      <LogoutModal
+        isOpen={modalAbierto}
+        onClose={() => setModalAbierto(false)}
+        onConfirm={cerrarSesion}
+      />
+
+
         </div>
 
 
