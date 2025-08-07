@@ -331,7 +331,7 @@ if (loading) {
           </motion.h1>
 
           <motion.button
-            onClick={() => {
+        onClick={() => {
               if (window.confirm("¿Estás seguro de que querés cerrar sesión?")) {
                 localStorage.removeItem('token');
                 navigate('/');
