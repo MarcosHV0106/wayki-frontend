@@ -79,17 +79,7 @@ const handleSubmit = async (e) => {
               />
             </div>
 
-            <div>
-              <label className="block text-gray-700 dark:text-gray-300 mb-1 font-medium">Contraseña</label>
-              <input
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 dark:bg-gray-700 dark:text-white transition"
-                required
-              />
-            </div>
+            {/* === SECCIÓN DE CONTRASEÑA MODIFICADA === */}
             <div>
               <label className="block text-gray-700 dark:text-gray-300 mb-1 font-medium">Contraseña</label>
               {/* 3. Contenedor relativo para posicionar el ícono */}
@@ -114,6 +104,8 @@ const handleSubmit = async (e) => {
                 </button>
               </div>
             </div>
+            {/* ======================================= */}
+            
             <button
               type="submit"
               className="w-full bg-sky-600 hover:bg-sky-700 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-300 shadow hover:shadow-md"
