@@ -320,14 +320,32 @@ if (loading) {
   return (
     <AnimatedPage>
       <div className="min-h-screen bg-gradient-to-br from-sky-100 via-sky-200 to-sky-300 dark:from-gray-900 dark:to-gray-800 px-2 sm:px-4 md:px-6 py-6">
-        <motion.h1
-          className="text-4xl font-extrabold mb-10 text-center text-sky-800 dark:text-sky-300 drop-shadow-md"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-        >
-          Panel de Mesas
-        </motion.h1>
+        <div className="flex items-center justify-between mb-10">
+          <motion.h1
+            className="text-4xl font-extrabold text-sky-800 dark:text-sky-300 drop-shadow-md"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            Panel de Mesas
+          </motion.h1>
+
+          <motion.button
+            onClick={() => {
+              if (window.confirm("¿Estás seguro de que querés cerrar sesión?")) {
+                localStorage.removeItem('token');
+                navigate('/');
+              }
+            }}
+            className="text-sm sm:text-base bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+          >
+            Cerrar Sesión
+          </motion.button>
+        </div>
+
 
         {/* --- BOTÓN FLOTANTE --- */}
         <AnimatePresence>
