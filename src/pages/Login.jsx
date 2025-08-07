@@ -6,11 +6,14 @@ import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 import AnimatedPage from "../components/AnimatedPage";
 import { toast } from 'sonner'; // ✅ Nuevo
+import { Eye, EyeOff } from 'lucide-react'; // <-- 1. IMPORTAR ÍCONOS
+
 
 const Login = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // <-- 2. AÑADIR ESTADO
   const { login } = useAuth();
 
 const handleSubmit = async (e) => {
@@ -87,7 +90,30 @@ const handleSubmit = async (e) => {
                 required
               />
             </div>
-
+            <div>
+              <label className="block text-gray-700 dark:text-gray-300 mb-1 font-medium">Contraseña</label>
+              {/* 3. Contenedor relativo para posicionar el ícono */}
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'} // <-- Cambia el tipo de input dinámicamente
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  // Añadimos padding a la derecha (pr-10) para que el texto no se solape con el ícono
+                  className="w-full px-4 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 dark:bg-gray-700 dark:text-white transition"
+                  required
+                />
+                {/* 4. Botón para el ícono */}
+                <button
+                  type="button" // Importante para que no envíe el formulario
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-sky-500 transition"
+                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+            </div>
             <button
               type="submit"
               className="w-full bg-sky-600 hover:bg-sky-700 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-300 shadow hover:shadow-md"
