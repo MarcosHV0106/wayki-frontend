@@ -195,7 +195,7 @@ const handleNuevaVenta = (venta) => {
           <h2 className="text-3xl font-bold mb-8 tracking-wide drop-shadow-md">Wayki Admin</h2>
           <nav className="space-y-4">
             <button
-              onClick={() => window.open('/mesas', '_blank')} // <-- CAMBIO AQUÍ
+              onClick={() => navigate('/mesas')} // <-- CAMBIO AQUÍ
               className="flex items-center gap-3 px-4 py-3 w-full bg-white/10 hover:bg-white/20 rounded-md transition text-sm sm:text-base"
             >
               <LayoutDashboard size={20} />
