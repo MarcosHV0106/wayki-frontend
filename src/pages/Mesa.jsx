@@ -3,8 +3,10 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import AnimatedPage from '../components/AnimatedPage';
-import { Users, Eye, DollarSign, Plus } from 'lucide-react'; // Cambié CheckCircle por Users para el botón familiar
+import { Users, Eye, DollarSign, Plus, LogOut } from 'lucide-react'; // Añadí LogOut
 import { toast } from 'sonner';
+import ModalCierreSesion from '../components/ModalCierreSesion'; // <-- AÑADIR ESTA LÍNEA
+
 
 
 const MesaPanel = () => {
@@ -12,6 +14,7 @@ const MesaPanel = () => {
   const [loading, setLoading] = useState(true);
   const [seleccionadas, setSeleccionadas] = useState([]);
   const navigate = useNavigate();
+  const [isModalOpen, setIsModalOpen] = useState(false); // <-- AÑADIR ESTADO PARA EL MODAL
   
 
   useEffect(() => {
@@ -71,6 +74,13 @@ const MesaPanel = () => {
     } catch (error) {
       console.error('Error al cargar mesas:', error);
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    toast.success('Sesión cerrada correctamente.');
+    navigate('/');
+    setIsModalOpen(false); // Cierra el modal después de la acción
   };
 
   const parseJwt = (token) => {
@@ -319,6 +329,11 @@ if (loading) {
 
   return (
     <AnimatedPage>
+      <ModalCierreSesion
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={handleLogout}
+      />
       <div className="min-h-screen bg-gradient-to-br from-sky-100 via-sky-200 to-sky-300 dark:from-gray-900 dark:to-gray-800 px-2 sm:px-4 md:px-6 py-6">
         <div className="flex items-center justify-between mb-10">
           <motion.h1
@@ -329,19 +344,14 @@ if (loading) {
           >
             Panel de Mesas
           </motion.h1>
-
           <motion.button
-        onClick={() => {
-              if (window.confirm("¿Estás seguro de que querés cerrar sesión?")) {
-                localStorage.removeItem('token');
-                navigate('/');
-              }
-            }}
-            className="text-sm sm:text-base bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition"
+            onClick={() => setIsModalOpen(true)} // <-- CAMBIO AQUÍ: Abre el modal en lugar de usar window.confirm
+            className="flex items-center gap-2 text-sm sm:text-base bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.2 }}
           >
+            <LogOut size={16} />
             Cerrar Sesión
           </motion.button>
         </div>

@@ -4,9 +4,10 @@ import { useNavigate } from "react-router-dom";
 import AreaChartVentas from "../components/AreaChartVentas";
 import AnimatedPage from "../components/AnimatedPage";
 import { motion } from "framer-motion";
-import { BarChart4, LayoutDashboard, Pencil } from "lucide-react";
+import { BarChart4, LayoutDashboard, Pencil, LogOut } from "lucide-react"; // <-- AÑADÍ LogOut
 import { io } from "socket.io-client";
 import { toast } from "sonner";
+import ModalCierreSesion from "../components/ModalCierreSesion"; // <-- AÑADIR ESTA LÍNEA
 const API_URL = import.meta.env.VITE_API_URL;
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL;
 
@@ -17,6 +18,7 @@ const AdminPanel = () => {
   const [ventasTotales, setVentasTotales] = useState(0);
   const [ventasPorDia, setVentasPorDia] = useState([]);
   const [ventasHoy, setVentasHoy] = useState(0);
+  const [isModalOpen, setIsModalOpen] = useState(false); // <-- AÑADIR ESTADO PARA EL MODAL
 
 
 
@@ -184,10 +186,23 @@ const handleNuevaVenta = (venta) => {
   });
 };
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('usuario'); // Es buena práctica limpiar todo
+    toast.success('Sesión cerrada correctamente.');
+    navigate('/');
+    setIsModalOpen(false);
+  };
+
 
 
   return (
   <AnimatedPage>
+    <ModalCierreSesion
+      isOpen={isModalOpen}
+      onClose={() => setIsModalOpen(false)}
+      onConfirm={handleLogout}
+    />
     <div className="min-h-screen flex flex-col lg:flex-row bg-gradient-to-br from-sky-100 to-white dark:from-gray-900 dark:to-black transition-all duration-500">
       {/* BARRA LATERAL */}
       <div className="w-full lg:w-64 bg-gradient-to-b from-blue-900 to-blue-700 text-white p-6 flex flex-col justify-between shadow-xl">
@@ -211,7 +226,16 @@ const handleNuevaVenta = (venta) => {
             </button>
           </nav>
         </div>
-        <p className="text-xs text-white/60 mt-6 italic">Versión 1.0 • WAYKI</p>
+        <div>
+           <button
+              onClick={() => setIsModalOpen(true)} // <-- Abre el modal
+              className="flex items-center gap-3 px-4 py-3 w-full bg-red-600/80 hover:bg-red-600 rounded-md transition text-sm sm:text-base font-semibold"
+            >
+              <LogOut size={20} />
+              Cerrar Sesión
+            </button>
+          <p className="text-xs text-white/60 mt-6 italic">Versión 1.0 • WAYKI</p>
+        </div>
       </div>
 
       {/* CONTENIDO PRINCIPAL */}
