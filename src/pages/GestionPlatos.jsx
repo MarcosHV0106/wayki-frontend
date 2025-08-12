@@ -26,6 +26,9 @@ const GestionPlatos = () => {
     "Bebida",
   ];
 
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState(categorias[0]);
+
+
   const platosProtegidos = [
     "Seco de Res con Frejoles",
     "Tallarín Verde con Milanesa/Pechuga",
@@ -166,7 +169,24 @@ const GestionPlatos = () => {
           Gestión de Platos
         </h1>
 
-        {categorias.map((categoria) => (
+                {/* Filtro por categoría */}
+        <div className="mb-6">
+          <label className="block text-gray-700 dark:text-gray-300 mb-2 font-medium">
+            Seleccionar Categoría
+          </label>
+          <select
+            className="w-full sm:w-64 p-2 rounded border dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white"
+            value={categoriaSeleccionada}
+            onChange={(e) => setCategoriaSeleccionada(e.target.value)}
+          >
+            {categorias.map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+        </div>
+
+
+        {[categoriaSeleccionada].map((categoria) => (
           <div
             key={categoria}
             className="mb-8 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden"

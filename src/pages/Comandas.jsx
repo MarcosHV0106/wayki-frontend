@@ -5,8 +5,17 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import AnimatedPage from '../components/AnimatedPage';
 import { toast } from 'sonner';
+import { imprimirComandaBluetooth, pruebaImpresionSimple } from '../utils/impresionBluetooth'; // ⬅️ importar el módulo
 const API = import.meta.env.VITE_API_URL;
-
+const categorias = [
+  "Entrada",
+  "Segundo",
+  "Ejecutivo",
+  "Caldos",
+  "Platos a la Carta",
+  "Platos Marinos",
+  "Bebida"
+];
 
 
 const Comandas = () => {
@@ -17,12 +26,12 @@ const Comandas = () => {
   const numeroMesa = searchParams.get('numero');
   const tipoMesa = searchParams.get('tipo'); // 'familiar' o null
 
-
   const [platos, setPlatos] = useState([]);
   const [comanda, setComanda] = useState([]);
   const [, setEstadoMesa] = useState(null);
   const [mostrarModalExito, setMostrarModalExito] = useState(false); // ✅ Modal estado
   const [mesasAsociadas, setMesasAsociadas] = useState([]);
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState(categorias[0]);
 
 
   useEffect(() => {
@@ -40,31 +49,30 @@ const Comandas = () => {
     obtenerPlatos();
   }, []);
 
-useEffect(() => {
-  const obtenerEstadoMesa = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const endpoint = tipoMesa === 'familiar'
-      ? `${API}/mesas-familiares/${mesaId}`
-      : `${API}/mesas/${mesaId}`;
+  useEffect(() => {
+    const obtenerEstadoMesa = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const endpoint = tipoMesa === 'familiar'
+        ? `${API}/mesas-familiares/${mesaId}`
+        : `${API}/mesas/${mesaId}`;
 
-      const response = await axios.get(endpoint, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+        const response = await axios.get(endpoint, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-      setEstadoMesa(response.data.estado);
+        setEstadoMesa(response.data.estado);
 
-      // ✅ Guardar mesas asociadas si es familiar
-      if (tipoMesa === 'familiar' && response.data.mesas) {
-        setMesasAsociadas(response.data.mesas.map(m => m.id));
+        // ✅ Guardar mesas asociadas si es familiar
+        if (tipoMesa === 'familiar' && response.data.mesas) {
+          setMesasAsociadas(response.data.mesas.map(m => m.id));
+        }
+      } catch (error) {
+        console.error("Error al obtener estado de la mesa:", error);
       }
-    } catch (error) {
-      console.error("Error al obtener estado de la mesa:", error);
-    }
-  };
-  obtenerEstadoMesa();
-}, [mesaId]);
-
+    };
+    obtenerEstadoMesa();
+  }, [mesaId]);
 
   const agregarPlato = (plato) => {
     setComanda(currentComanda => {
@@ -93,140 +101,134 @@ useEffect(() => {
 
   const cancelar = () => navigate('/mesas');
 
-const confirmar = async () => {
-  const total = parseFloat(calcularTotalConMenu().toFixed(2));
-  const token = localStorage.getItem('token');
-  if (!token) {
-    toast.error('Token no encontrado. Inicia sesión nuevamente.');
-    return;
-  }
+  const confirmar = async () => {
+    const total = parseFloat(calcularTotalConMenu().toFixed(2));
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('Token no encontrado. Inicia sesión nuevamente.');
+      return;
+    }
 
-  let usuarioId = null;
-  try {
-    const decoded = jwtDecode(token);
-    usuarioId = decoded.id;
-  } catch (error) {
-    toast.error('Token inválido. Por favor vuelve a iniciar sesión.');
-    return;
-  }
+    let usuarioId = null;
+    try {
+      const decoded = jwtDecode(token);
+      usuarioId = decoded.id;
+    } catch (error) {
+      toast.error('Token inválido. Por favor vuelve a iniciar sesión.');
+      return;
+    }
 
-  const payload = {
-    usuarioId,
-    total,
-    tipo: tipoMesa,
-    items: comanda.map(plato => ({
-      platoId: plato.id,
-      cantidad: plato.cantidad || 1,
-      precioUnitario: parseFloat(plato.precio),
-      notas: plato.notas || '',
-    })),
-    ...(tipoMesa === 'familiar'
-      ? { mesaFamiliarId: parseInt(mesaId) }
-      : { mesaId: parseInt(mesaId) }),
+    const payload = {
+      usuarioId,
+      total,
+      tipo: tipoMesa,
+      items: comanda.map(plato => ({
+        platoId: plato.id,
+        cantidad: plato.cantidad || 1,
+        precioUnitario: parseFloat(plato.precio),
+        notas: plato.notas || '',
+      })),
+      ...(tipoMesa === 'familiar'
+        ? { mesaFamiliarId: parseInt(mesaId) }
+        : { mesaId: parseInt(mesaId) }),
+    };
+
+    try {
+      // 1. Crear comanda
+      console.log('📦 Payload enviado:', payload);
+      const res = await axios.post(`${API}/comandas`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const nuevaComanda = res.data.comanda;
+
+      // 1.5 Imprimir comanda en la BT-581 (directo desde Android con Capacitor)
+      try {
+        await imprimirComandaBluetooth({
+          mesa: { nombre: `Mesa #${numeroMesa}` },
+          mesero: { nombre: "Mesero asignado" },
+          platos: comanda.map(p => ({
+            nombre: p.nombre,
+            cantidad: p.cantidad
+          }))
+        });
+        toast.success(`✅ Comanda impresa para mesa #${numeroMesa}`);
+      } catch (printError) {
+        console.error('❌ Error al imprimir comanda:', printError);
+        toast.error('Comanda registrada, pero hubo un error al imprimir: ' + printError);
+      }
+
+      // 2. Actualizar estado de la mesa según tipo
+      const url = tipoMesa === 'familiar'
+        ? `${API}/mesas-familiares/${mesaId}`
+        : `${API}/mesas/${mesaId}`;
+
+      const data = tipoMesa === 'familiar'
+        ? {
+            estado: 'Preparando',
+            nombre: `Mesa Familiar #${numeroMesa}`,
+            mesasIds: mesasAsociadas,
+          }
+        : { estado: 'Preparando' };
+
+      await axios.put(url, data, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      toast.success(`✅ Comanda enviada para mesa #${numeroMesa}`);
+      setMostrarModalExito(true);
+
+    } catch (error) {
+      console.error('❌ Error al confirmar comanda:', error);
+      toast.error('Error al registrar la comanda. Intenta nuevamente.');
+    }
   };
 
-
-try {
-  // 1. Crear comanda
-  console.log('📦 Payload enviado:', payload);
-  const res = await axios.post(`${API}/comandas`, payload, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-
-  const nuevaComanda = res.data.comanda; // ✅ Accede a la comanda creada
-
-  // 1.5 Imprimir comanda
-  await axios.post(`${API}/impresion/${nuevaComanda.id}`, {}, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-
-  // 2. Actualizar estado de la mesa según tipo
-  const url = tipoMesa === 'familiar'
-    ? `${API}/mesas-familiares/${mesaId}`
-    : `${API}/mesas/${mesaId}`;
-
-  const data = tipoMesa === 'familiar'
-    ? {
-        estado: 'Preparando',
-        nombre: `Mesa Familiar #${numeroMesa}`,
-        mesasIds: mesasAsociadas,
+  const calcularTotalConMenu = () => {
+    let total = 0;
+    const items = [];
+    comanda.forEach(item => {
+      for (let i = 0; i < item.cantidad; i++) {
+        items.push({ ...item, cantidad: 1 });
       }
-    : { estado: 'Preparando' };
+    });
+    const entradas = items.filter(p => p.categoria === 'Entrada');
+    const segundos = items.filter(p => p.categoria === 'Segundo');
+    const ejecutivos = items.filter(p => p.categoria === 'Ejecutivo');
+    let entradasUsadas = 0;
+    let segundosUsados = 0;
+    let ejecutivosUsados = 0;
+    const cantidadMenusEjecutivo = Math.min(entradas.length, ejecutivos.length);
+    total += cantidadMenusEjecutivo * 18;
+    entradasUsadas += cantidadMenusEjecutivo;
+    ejecutivosUsados += cantidadMenusEjecutivo;
+    const entradasDisponiblesParaSegundo = entradas.length - entradasUsadas;
+    const cantidadMenusSegundo = Math.min(entradasDisponiblesParaSegundo, segundos.length);
+    total += cantidadMenusSegundo * 14;
+    entradasUsadas += cantidadMenusSegundo;
+    segundosUsados += cantidadMenusSegundo;
+    const restantes = items.filter(p => {
+      if (p.categoria === 'Entrada' && entradasUsadas > 0) {
+        entradasUsadas--;
+        return false;
+      }
+      if (p.categoria === 'Segundo' && segundosUsados > 0) {
+        segundosUsados--;
+        return false;
+      }
+      if (p.categoria === 'Ejecutivo' && ejecutivosUsados > 0) {
+        ejecutivosUsados--;
+        return false;
+      }
+      return true;
+    });
+    restantes.forEach(p => {
+      total += Number(p.precio);
+    });
+    return total;
+  };
 
-  await axios.put(url, data, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  toast.success(`✅ Comanda enviada para mesa #${numeroMesa}`);
-  setMostrarModalExito(true); // ✅ Mostrar modal de éxito
-} catch (error) {
-  console.error('❌ Error al confirmar comanda:', error);
-  toast.error('Error al registrar la comanda. Intenta nuevamente.');
-}
-
-};
-
-
-const calcularTotalConMenu = () => {
-  let total = 0;
-
-  // Expandir platos según cantidad
-  const items = [];
-  comanda.forEach(item => {
-    for (let i = 0; i < item.cantidad; i++) {
-      items.push({ ...item, cantidad: 1 });
-    }
-  });
-
-  // Agrupar por categoría
-  const entradas = items.filter(p => p.categoria === 'Entrada');
-  const segundos = items.filter(p => p.categoria === 'Segundo');
-  const ejecutivos = items.filter(p => p.categoria === 'Ejecutivo');
-
-  // Clonar para llevar control de uso
-  let entradasUsadas = 0;
-  let segundosUsados = 0;
-  let ejecutivosUsados = 0;
-
-  // Primero aplicar combos Entrada + Ejecutivo → S/18
-  const cantidadMenusEjecutivo = Math.min(entradas.length, ejecutivos.length);
-  total += cantidadMenusEjecutivo * 18;
-  entradasUsadas += cantidadMenusEjecutivo;
-  ejecutivosUsados += cantidadMenusEjecutivo;
-
-  // Luego aplicar combos Entrada + Segundo → S/14
-  const entradasDisponiblesParaSegundo = entradas.length - entradasUsadas;
-  const cantidadMenusSegundo = Math.min(entradasDisponiblesParaSegundo, segundos.length);
-  total += cantidadMenusSegundo * 14;
-  entradasUsadas += cantidadMenusSegundo;
-  segundosUsados += cantidadMenusSegundo;
-
-  // Filtrar platos restantes que no fueron parte de ningún combo
-  const restantes = items.filter(p => {
-    if (p.categoria === 'Entrada' && entradasUsadas > 0) {
-      entradasUsadas--;
-      return false;
-    }
-    if (p.categoria === 'Segundo' && segundosUsados > 0) {
-      segundosUsados--;
-      return false;
-    }
-    if (p.categoria === 'Ejecutivo' && ejecutivosUsados > 0) {
-      ejecutivosUsados--;
-      return false;
-    }
-    return true;
-  });
-
-  // Sumar el precio de los platos restantes (bebidas, etc.)
-  restantes.forEach(p => {
-    total += Number(p.precio);
-  });
-
-  return total;
-};
-
-
-
+  
   return (
     <AnimatedPage>
       <div className="min-h-screen bg-gradient-to-tr from-white to-blue-100 dark:from-gray-900 dark:to-gray-800 px-4 sm:px-6 md:px-8 py-6">
@@ -238,39 +240,52 @@ const calcularTotalConMenu = () => {
         >
          Crear Comanda - {tipoMesa === 'familiar' ? 'Mesa Familiar' : 'Mesa'} #{numeroMesa}
         </motion.h1>
-
         <h2 className="text-2xl font-semibold text-gray-800 dark:text-white mb-4 mt-8">Platos Disponibles</h2>
+        <div className="mb-6 flex items-center gap-4">
+          <label className="text-gray-700 dark:text-gray-300 font-medium whitespace-nowrap">
+            Seleccionar Categoría:
+          </label>
+          <select
+            className="w-full sm:w-64 p-2 rounded border dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white"
+            value={categoriaSeleccionada}
+            onChange={(e) => setCategoriaSeleccionada(e.target.value)}
+          >
+            {categorias.map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+        </div>
 
-        {["Entrada", "Segundo", "Ejecutivo", "Caldos", "Platos a la Carta" , "Platos Marinos", "Bebida"].map((categoria) => (
-          <div key={categoria} className="mb-10">
-            <h3 className="text-xl font-bold text-gray-700 dark:text-gray-200 mb-3 border-b pb-1">{categoria}</h3>
-            <motion.div
-              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
-              initial="hidden"
-              animate="visible"
-              variants={{ visible: { transition: { staggerChildren: 0.06 } } }}
-            >
-              {platos.filter(p => p.categoria === categoria).map(plato => (
-                <motion.div
-                  key={plato.id}
-                  className="bg-white dark:bg-gray-700 rounded-xl shadow-lg p-4 flex flex-col justify-between border hover:shadow-xl transition-all duration-200"
-                  whileHover={{ scale: 1.03 }}
-                >
-                  <div>
-                    <h4 className="font-semibold text-lg text-gray-800 dark:text-white">{plato.nombre}</h4>
-                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">S/ {plato.precio}</p>
-                  </div>
-                  <button
-                    onClick={() => agregarPlato(plato)}
-                    className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-md mt-auto font-medium transition"
-                  >
-                    Agregar +
-                  </button>
-                </motion.div>
-              ))}
-            </motion.div>
-          </div>
-        ))}
+
+{/* Lista de platos filtrados */}
+<div className="mb-8 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden p-4">
+  <motion.div
+    className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
+    initial="hidden"
+    animate="visible"
+    variants={{ visible: { transition: { staggerChildren: 0.06 } } }}
+  >
+    {platos.filter(p => p.categoria === categoriaSeleccionada).map(plato => (
+      <motion.div
+        key={plato.id}
+        className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-4 rounded-xl shadow flex flex-col justify-between"
+        whileHover={{ scale: 1.03 }}
+      >
+        <div>
+          <h4 className="font-semibold text-lg text-gray-800 dark:text-white">{plato.nombre}</h4>
+          <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">S/ {plato.precio}</p>
+        </div>
+        <button
+          onClick={() => agregarPlato(plato)}
+          className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-md mt-auto font-medium transition"
+        >
+          Agregar +
+        </button>
+      </motion.div>
+    ))}
+  </motion.div>
+</div>
+
 
         <h2 className="text-2xl font-semibold text-gray-800 dark:text-white mb-3 mt-10">Comanda Actual</h2>
         <div className="bg-white dark:bg-gray-700 rounded-lg p-4 shadow-md transition-all duration-300 overflow-x-auto max-w-full">
@@ -319,6 +334,13 @@ const calcularTotalConMenu = () => {
           >
             Confirmar Comanda
           </button>
+          <button
+          onClick={pruebaImpresionSimple}
+          className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-lg font-semibold shadow transition"
+          type="button"
+        >
+          Probar Impresión Bluetooth
+        </button>
         </div>
 
         {/* ✅ MODAL DE ÉXITO */}
